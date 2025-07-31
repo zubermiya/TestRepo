@@ -245,19 +245,181 @@ class AIMediaDetector:
             logger.error(f"Error in face analysis: {str(e)}")
             return {'face_analysis_error': str(e)}
     
+    def analyze_image_statistics(self, image_path):
+        """Analyze image statistics that can indicate AI generation"""
+        try:
+            img = cv2.imread(image_path)
+            
+            # Convert to different color spaces
+            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+            lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+            
+            # Calculate various statistics
+            stats = {}
+            
+            # Color distribution analysis
+            for i, channel in enumerate(['b', 'g', 'r']):
+                stats[f'{channel}_mean'] = float(np.mean(img[:,:,i]))
+                stats[f'{channel}_std'] = float(np.std(img[:,:,i]))
+                stats[f'{channel}_skew'] = float(self._calculate_skewness(img[:,:,i]))
+            
+            # HSV analysis
+            stats['hue_mean'] = float(np.mean(hsv[:,:,0]))
+            stats['saturation_mean'] = float(np.mean(hsv[:,:,1]))
+            stats['value_mean'] = float(np.mean(hsv[:,:,2]))
+            
+            # Texture analysis
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            stats['texture_variance'] = float(np.var(gray))
+            
+            # Frequency domain analysis
+            f_transform = np.fft.fft2(gray)
+            f_shift = np.fft.fftshift(f_transform)
+            magnitude_spectrum = np.log(np.abs(f_shift) + 1)
+            stats['frequency_energy'] = float(np.mean(magnitude_spectrum))
+            
+            # AI generation indicators
+            ai_indicators = []
+            
+            # Check for unusually uniform color distributions (common in AI images)
+            if stats['b_std'] < 20 and stats['g_std'] < 20 and stats['r_std'] < 20:
+                ai_indicators.append("Unusually uniform color distribution")
+            
+            # Check for low texture variance (smooth AI images)
+            if stats['texture_variance'] < 500:
+                ai_indicators.append("Low texture variance (smooth appearance)")
+            
+            # Check for unusual frequency patterns
+            if stats['frequency_energy'] > 15:
+                ai_indicators.append("Unusual frequency patterns detected")
+            
+            stats['ai_indicators'] = ai_indicators
+            stats['ai_score'] = len(ai_indicators) / 3.0  # Normalize to 0-1
+            
+            return stats
+            
+        except Exception as e:
+            logger.error(f"Error analyzing image statistics: {str(e)}")
+            return {}
+    
+    def _calculate_skewness(self, data):
+        """Calculate skewness of data"""
+        mean = np.mean(data)
+        std = np.std(data)
+        if std == 0:
+            return 0
+        return np.mean(((data - mean) / std) ** 3)
+    
+    def detect_ai_characteristics(self, image_path):
+        """Detect specific characteristics of AI-generated images"""
+        try:
+            img = cv2.imread(image_path)
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            
+            characteristics = {}
+            
+            # 1. Check for overly smooth textures (common in AI images)
+            # Calculate local variance
+            kernel = np.ones((5,5), np.float32) / 25
+            local_mean = cv2.filter2D(gray.astype(np.float32), -1, kernel)
+            local_variance = cv2.filter2D((gray.astype(np.float32) - local_mean)**2, -1, kernel)
+            avg_local_variance = np.mean(local_variance)
+            characteristics['smoothness_score'] = float(avg_local_variance)
+            
+            # 2. Check for artificial patterns
+            # Look for regular grid-like patterns
+            edges = cv2.Canny(gray, 50, 150)
+            edge_density = np.sum(edges > 0) / (edges.shape[0] * edges.shape[1])
+            characteristics['edge_density'] = float(edge_density)
+            
+            # 3. Check for unrealistic color distributions
+            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+            color_variance = np.var(hsv)
+            characteristics['color_variance'] = float(color_variance)
+            
+            # 4. Check for frequency domain anomalies
+            f_transform = np.fft.fft2(gray)
+            f_shift = np.fft.fftshift(f_transform)
+            magnitude_spectrum = np.log(np.abs(f_shift) + 1)
+            
+            # Check for unusual frequency patterns
+            high_freq_energy = np.sum(magnitude_spectrum[100:, 100:])
+            total_energy = np.sum(magnitude_spectrum)
+            freq_ratio = high_freq_energy / total_energy if total_energy > 0 else 0
+            characteristics['frequency_ratio'] = float(freq_ratio)
+            
+            # 5. Check for artificial symmetry
+            # Compare left and right halves
+            height, width = gray.shape
+            left_half = gray[:, :width//2]
+            right_half = gray[:, width//2:]
+            symmetry_score = np.corrcoef(left_half.flatten(), right_half.flatten())[0, 1]
+            characteristics['symmetry_score'] = float(symmetry_score) if not np.isnan(symmetry_score) else 0.0
+            
+            # 6. Check for unrealistic sharpness
+            laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
+            characteristics['sharpness'] = float(laplacian_var)
+            
+            # AI indicators based on these characteristics
+            ai_indicators = []
+            ai_score = 0.0
+            
+            # Very smooth textures (AI characteristic) - More sensitive
+            if avg_local_variance < 200:
+                ai_indicators.append("Very smooth textures detected")
+                ai_score += 0.3
+            
+            # Unusual edge patterns - More sensitive
+            if edge_density < 0.02 or edge_density > 0.15:
+                ai_indicators.append("Unusual edge patterns")
+                ai_score += 0.2
+            
+            # Low color variance (AI characteristic) - More sensitive
+            if color_variance < 2000:
+                ai_indicators.append("Low color variance")
+                ai_score += 0.2
+            
+            # Unusual frequency patterns - More sensitive
+            if freq_ratio < 0.02:
+                ai_indicators.append("Unusual frequency patterns")
+                ai_score += 0.2
+            
+            # Perfect symmetry (suspicious) - More sensitive
+            if abs(symmetry_score) > 0.6:
+                ai_indicators.append("Unusually high symmetry")
+                ai_score += 0.2
+            
+            # Unrealistic sharpness - More sensitive
+            if laplacian_var < 100:
+                ai_indicators.append("Unrealistic sharpness")
+                ai_score += 0.1
+            
+            # Additional AI indicators
+            # Check for artificial grid patterns
+            if edge_density < 0.01:
+                ai_indicators.append("Artificial grid patterns detected")
+                ai_score += 0.2
+            
+            # Check for overly uniform textures
+            if avg_local_variance < 50:
+                ai_indicators.append("Extremely uniform textures")
+                ai_score += 0.3
+            
+            characteristics['ai_indicators'] = ai_indicators
+            characteristics['ai_score'] = min(ai_score, 1.0)
+            
+            return characteristics
+            
+        except Exception as e:
+            logger.error(f"Error detecting AI characteristics: {str(e)}")
+            return {}
+    
     def detect_ai_image(self, image_path):
         """Main function to detect if an image is AI-generated"""
         try:
-            # Load and preprocess image
-            image = Image.open(image_path).convert('RGB')
-            input_tensor = self.image_transform(image).unsqueeze(0).to(self.device)
-            
-            # Get model prediction
-            with torch.no_grad():
-                outputs = self.image_model(input_tensor)
-                probabilities = torch.softmax(outputs, dim=1)
-                ai_probability = probabilities[0][1].item()  # Assuming class 1 is AI-generated
-                confidence = torch.max(probabilities).item()
+            # Check if file exists
+            if not os.path.exists(image_path):
+                raise FileNotFoundError(f"Image file not found: {image_path}")
             
             # Extract metadata
             metadata = self.extract_metadata(image_path)
@@ -268,35 +430,92 @@ class AIMediaDetector:
             # Face analysis
             face_analysis = self.detect_face_inconsistencies(image_path)
             
+            # AI characteristics analysis (NEW - more accurate)
+            ai_characteristics = self.detect_ai_characteristics(image_path)
+            
+            # Image statistics analysis
+            image_stats = self.analyze_image_statistics(image_path)
+            
             # Combine analyses for final assessment
             analysis_factors = []
+            ai_score = 0.0
+            total_weight = 0.0
             
-            # Model prediction
-            if ai_probability > 0.7:
-                analysis_factors.append("High AI probability from neural network")
-            elif ai_probability > 0.5:
-                analysis_factors.append("Moderate AI probability from neural network")
+            # AI Characteristics Analysis (weight: 0.5) - Most important
+            if ai_characteristics:
+                ai_char_weight = 0.5
+                ai_score += ai_characteristics.get('ai_score', 0) * ai_char_weight
+                total_weight += ai_char_weight
+                
+                # Add specific indicators
+                for indicator in ai_characteristics.get('ai_indicators', []):
+                    analysis_factors.append(indicator)
             
-            # Metadata analysis
+            # Metadata analysis (weight: 0.2)
+            metadata_weight = 0.2
+            metadata_score = 0.0
+            
             if 'exif' in metadata and len(metadata['exif']) == 0:
+                metadata_score = 0.3
                 analysis_factors.append("Missing EXIF data (suspicious)")
+            elif 'exif' in metadata and len(metadata['exif']) > 10:
+                metadata_score = 0.0
+                analysis_factors.append("Rich EXIF data (likely real)")
+            else:
+                metadata_score = 0.1
+                analysis_factors.append("Limited EXIF data")
             
-            # Compression analysis
+            ai_score += metadata_score * metadata_weight
+            total_weight += metadata_weight
+            
+            # Compression analysis (weight: 0.2)
+            compression_weight = 0.2
             if compression_analysis.get('suspicious_compression', False):
+                compression_score = 0.4
                 analysis_factors.append("Unusual compression patterns detected")
+            else:
+                compression_score = 0.1
+                analysis_factors.append("Normal compression patterns")
             
-            # Face analysis
-            if face_analysis.get('faces_detected', 0) > 0:
-                analysis_factors.append(f"Detected {face_analysis['faces_detected']} face(s)")
+            ai_score += compression_score * compression_weight
+            total_weight += compression_weight
+            
+            # Image statistics analysis (weight: 0.1)
+            stats_weight = 0.1
+            if image_stats.get('ai_score', 0) > 0.5:
+                stats_score = image_stats['ai_score']
+                analysis_factors.extend(image_stats.get('ai_indicators', []))
+            else:
+                stats_score = 0.1
+                analysis_factors.append("Normal image statistics")
+            
+            ai_score += stats_score * stats_weight
+            total_weight += stats_weight
+            
+            # Normalize final score
+            final_ai_probability = ai_score / total_weight if total_weight > 0 else 0.0
+            
+            # Determine verdict with 30% threshold as requested
+            if final_ai_probability > 0.3:
+                verdict = 'Likely AI-Generated'
+                analysis_factors.append("AI Generation Probability above 30% - likely AI-generated")
+            else:
+                verdict = 'Likely Real'
+                analysis_factors.append("AI Generation Probability below 30% - likely real")
+            
+            # Calculate confidence based on consistency of indicators
+            confidence = 0.5 + (final_ai_probability * 0.5) if final_ai_probability > 0.5 else 0.5
             
             return {
-                'ai_probability': round(ai_probability, 4),
+                'ai_probability': round(final_ai_probability, 4),
                 'confidence': round(confidence, 4),
                 'analysis': analysis_factors,
                 'metadata': metadata,
                 'compression_analysis': compression_analysis,
                 'face_analysis': face_analysis,
-                'verdict': 'AI-Generated' if ai_probability > 0.6 else 'Likely Real'
+                'ai_characteristics': ai_characteristics,
+                'image_statistics': image_stats,
+                'verdict': verdict
             }
             
         except Exception as e:
@@ -356,12 +575,12 @@ class AIMediaDetector:
             analysis_factors = []
             analysis_factors.append(f"Analyzed {len(frame_predictions)} frames")
             
-            if avg_ai_probability > 0.7:
-                analysis_factors.append("High AI probability across video frames")
-            elif avg_ai_probability > 0.5:
-                analysis_factors.append("Moderate AI probability across video frames")
+            if avg_ai_probability > 0.3:
+                analysis_factors.append("AI Generation Probability above 30% - likely AI-generated")
+                verdict = 'Likely AI-Generated'
             else:
-                analysis_factors.append("Low AI probability - likely real video")
+                analysis_factors.append("AI Generation Probability below 30% - likely real")
+                verdict = 'Likely Real'
             
             return {
                 'ai_probability': round(avg_ai_probability, 4),
@@ -370,7 +589,7 @@ class AIMediaDetector:
                 'metadata': metadata,
                 'frames_analyzed': len(frame_predictions),
                 'frame_predictions': frame_predictions,
-                'verdict': 'AI-Generated' if avg_ai_probability > 0.6 else 'Likely Real'
+                'verdict': verdict
             }
             
         except Exception as e:

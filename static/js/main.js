@@ -116,6 +116,7 @@ function uploadFile(file) {
             showMediaPreview(file, data.filename);
         } else {
             showError(data.error || 'Analysis failed');
+            console.error('Upload response:', data);
         }
     })
     .catch(error => {
@@ -187,12 +188,12 @@ function displayResults(data) {
     
     verdictTitle.textContent = data.verdict;
     
-    if (data.verdict === 'AI-Generated') {
-        verdict.className = 'alert alert-danger';
-        verdictDescription.textContent = 'This media appears to be artificially generated. Multiple indicators suggest AI involvement in its creation.';
+    if (data.verdict === 'Likely AI-Generated') {
+        verdict.className = 'alert alert-warning';
+        verdictDescription.textContent = 'This media shows indicators of AI generation (probability above 30%).';
     } else if (data.verdict === 'Likely Real') {
         verdict.className = 'alert alert-success';
-        verdictDescription.textContent = 'This media appears to be authentic. Analysis suggests it was created through traditional means.';
+        verdictDescription.textContent = 'This media appears to be authentic (probability below 30%).';
     } else {
         verdict.className = 'alert alert-warning';
         verdictDescription.textContent = 'Analysis could not be completed successfully. Please try again or contact support.';
@@ -353,6 +354,95 @@ function displayDetailedResults(data) {
                 <small class="text-muted">Artifact Ratio</small>
             </div>
         `;
+    }
+
+    // AI Characteristics Analysis (NEW - more accurate)
+    if (data.ai_characteristics) {
+        const aiChar = data.ai_characteristics;
+        
+        if (aiChar.smoothness_score !== undefined) {
+            html += `
+                <div class="analysis-card">
+                    <h6><i class="fas fa-feather me-2"></i>Smoothness Analysis</h6>
+                    <div class="analysis-value">${aiChar.smoothness_score.toFixed(0)}</div>
+                    <small class="text-muted">Smoothness Score</small>
+                </div>
+            `;
+        }
+        
+        if (aiChar.edge_density !== undefined) {
+            html += `
+                <div class="analysis-card">
+                    <h6><i class="fas fa-border-all me-2"></i>Edge Analysis</h6>
+                    <div class="analysis-value">${(aiChar.edge_density * 100).toFixed(2)}%</div>
+                    <small class="text-muted">Edge Density</small>
+                </div>
+            `;
+        }
+        
+        if (aiChar.color_variance !== undefined) {
+            html += `
+                <div class="analysis-card">
+                    <h6><i class="fas fa-palette me-2"></i>Color Analysis</h6>
+                    <div class="analysis-value">${aiChar.color_variance.toFixed(0)}</div>
+                    <small class="text-muted">Color Variance</small>
+                </div>
+            `;
+        }
+        
+        if (aiChar.symmetry_score !== undefined) {
+            html += `
+                <div class="analysis-card">
+                    <h6><i class="fas fa-balance-scale me-2"></i>Symmetry Analysis</h6>
+                    <div class="analysis-value">${(aiChar.symmetry_score * 100).toFixed(1)}%</div>
+                    <small class="text-muted">Symmetry Score</small>
+                </div>
+            `;
+        }
+        
+        if (aiChar.ai_score !== undefined) {
+            html += `
+                <div class="analysis-card">
+                    <h6><i class="fas fa-robot me-2"></i>AI Characteristics</h6>
+                    <div class="analysis-value">${(aiChar.ai_score * 100).toFixed(1)}%</div>
+                    <small class="text-muted">AI Score</small>
+                </div>
+            `;
+        }
+    }
+
+    // Image statistics analysis
+    if (data.image_statistics) {
+        const stats = data.image_statistics;
+        if (stats.texture_variance !== undefined) {
+            html += `
+                <div class="analysis-card">
+                    <h6><i class="fas fa-chart-bar me-2"></i>Texture Analysis</h6>
+                    <div class="analysis-value">${stats.texture_variance.toFixed(0)}</div>
+                    <small class="text-muted">Texture Variance</small>
+                </div>
+            `;
+        }
+        
+        if (stats.frequency_energy !== undefined) {
+            html += `
+                <div class="analysis-card">
+                    <h6><i class="fas fa-wave-square me-2"></i>Frequency Analysis</h6>
+                    <div class="analysis-value">${stats.frequency_energy.toFixed(2)}</div>
+                    <small class="text-muted">Frequency Energy</small>
+                </div>
+            `;
+        }
+        
+        if (stats.ai_score !== undefined) {
+            html += `
+                <div class="analysis-card">
+                    <h6><i class="fas fa-robot me-2"></i>AI Indicators</h6>
+                    <div class="analysis-value">${(stats.ai_score * 100).toFixed(1)}%</div>
+                    <small class="text-muted">AI Score</small>
+                </div>
+            `;
+        }
     }
 
     // Face analysis
