@@ -313,6 +313,10 @@ class AIMediaDetector:
     def detect_ai_image(self, image_path):
         """Main function to detect if an image is AI-generated"""
         try:
+            # Check if file exists
+            if not os.path.exists(image_path):
+                raise FileNotFoundError(f"Image file not found: {image_path}")
+            
             # Load and preprocess image
             image = Image.open(image_path).convert('RGB')
             input_tensor = self.image_transform(image).unsqueeze(0).to(self.device)

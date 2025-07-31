@@ -116,6 +116,7 @@ function uploadFile(file) {
             showMediaPreview(file, data.filename);
         } else {
             showError(data.error || 'Analysis failed');
+            console.error('Upload response:', data);
         }
     })
     .catch(error => {

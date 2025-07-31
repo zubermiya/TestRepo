@@ -59,25 +59,53 @@ def upload_file():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            
+            # Ensure upload directory exists
+            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+            
             file.save(filepath)
             
-            # Detect if media is AI-generated
-            if is_image(filename):
-                result = detector.detect_ai_image(filepath)
-            elif is_video(filename):
-                result = detector.detect_ai_video(filepath)
-            else:
-                return jsonify({'error': 'Unsupported file type'}), 400
+            # Check if file was saved successfully
+            if not os.path.exists(filepath):
+                return jsonify({'error': 'Failed to save uploaded file'}), 500
             
-            return jsonify({
-                'filename': filename,
-                'file_type': 'image' if is_image(filename) else 'video',
-                'ai_probability': result['ai_probability'],
-                'confidence': result['confidence'],
-                'analysis': result['analysis'],
-                'metadata': result.get('metadata', {}),
-                'success': True
-            })
+            # Detect if media is AI-generated
+            try:
+                if is_image(filename):
+                    result = detector.detect_ai_image(filepath)
+                elif is_video(filename):
+                    result = detector.detect_ai_video(filepath)
+                else:
+                    return jsonify({'error': 'Unsupported file type'}), 400
+                
+                # Ensure result has required fields
+                if 'ai_probability' not in result:
+                    result['ai_probability'] = 0.0
+                if 'confidence' not in result:
+                    result['confidence'] = 0.0
+                if 'analysis' not in result:
+                    result['analysis'] = []
+                if 'verdict' not in result:
+                    result['verdict'] = 'Uncertain'
+                
+                return jsonify({
+                    'filename': filename,
+                    'file_type': 'image' if is_image(filename) else 'video',
+                    'ai_probability': result['ai_probability'],
+                    'confidence': result['confidence'],
+                    'analysis': result['analysis'],
+                    'metadata': result.get('metadata', {}),
+                    'verdict': result['verdict'],
+                    'success': True
+                })
+                
+            except Exception as analysis_error:
+                logger.error(f"Error during AI analysis: {str(analysis_error)}")
+                return jsonify({
+                    'error': f'Analysis failed: {str(analysis_error)}',
+                    'filename': filename,
+                    'success': False
+                }), 500
         
         return jsonify({'error': 'File type not allowed'}), 400
     
@@ -123,4 +151,14 @@ def health_check():
     return jsonify({'status': 'healthy', 'models_loaded': detector.models_loaded})
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    try:
+        app.run(debug=True, host='0.0.0.0', port=5001)
+    except OSError as e:
+        if "Address already in use" in str(e):
+            print("Port 5001 is also in use. Trying port 5002...")
+            try:
+                app.run(debug=True, host='0.0.0.0', port=5002)
+            except OSError:
+                print("Please stop any running Flask applications or use a different port.")
+        else:
+            print(f"Error starting server: {e}")
