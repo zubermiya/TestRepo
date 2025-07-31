@@ -49,41 +49,57 @@ def index():
 @app.route('/upload', methods=['POST'])
 def upload_file():
     try:
+        logger.info("Upload request received")
+        
         if 'file' not in request.files:
+            logger.error("No file in request")
             return jsonify({'error': 'No file provided'}), 400
         
         file = request.files['file']
         if file.filename == '':
+            logger.error("Empty filename")
             return jsonify({'error': 'No file selected'}), 400
+        
+        logger.info(f"Processing file: {file.filename}")
         
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            
+            logger.info(f"Saving file to: {filepath}")
             file.save(filepath)
             
             # Detect if media is AI-generated
+            logger.info("Starting AI detection...")
             if is_image(filename):
+                logger.info("Analyzing as image")
                 result = detector.detect_ai_image(filepath)
             elif is_video(filename):
+                logger.info("Analyzing as video")
                 result = detector.detect_ai_video(filepath)
             else:
+                logger.error("Unsupported file type")
                 return jsonify({'error': 'Unsupported file type'}), 400
+            
+            logger.info(f"Analysis complete: {result.get('verdict', 'Unknown')}")
             
             return jsonify({
                 'filename': filename,
                 'file_type': 'image' if is_image(filename) else 'video',
-                'ai_probability': result['ai_probability'],
-                'confidence': result['confidence'],
-                'analysis': result['analysis'],
+                'ai_probability': result.get('ai_probability', 0),
+                'confidence': result.get('confidence', 0),
+                'analysis': result.get('analysis', []),
                 'metadata': result.get('metadata', {}),
+                'verdict': result.get('verdict', 'Analysis Failed'),
                 'success': True
             })
         
+        logger.error("File type not allowed")
         return jsonify({'error': 'File type not allowed'}), 400
     
     except Exception as e:
-        logger.error(f"Error processing file: {str(e)}")
-        return jsonify({'error': f'Processing error: {str(e)}'}), 500
+        logger.error(f"Error processing file: {str(e)}", exc_info=True)
+        return jsonify({'error': f'Processing error: {str(e)}', 'success': False}), 500
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):

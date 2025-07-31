@@ -102,12 +102,16 @@ function uploadFile(file) {
         body: formData
     })
     .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
+        console.log('Response status:', response.status);
+        return response.json().then(data => {
+            if (!response.ok) {
+                throw new Error(data.error || `HTTP error! status: ${response.status}`);
+            }
+            return data;
+        });
     })
     .then(data => {
+        console.log('Response data:', data);
         hideLoadingModal();
         progressContainer.style.display = 'none';
         
@@ -119,10 +123,10 @@ function uploadFile(file) {
         }
     })
     .catch(error => {
+        console.error('Upload error:', error);
         hideLoadingModal();
         progressContainer.style.display = 'none';
         showError('Error uploading file: ' + error.message);
-        console.error('Upload error:', error);
     });
 
     // Simulate progress for better UX
@@ -419,6 +423,12 @@ function displayDetailedResults(data) {
 function showLoadingModal() {
     const modal = new bootstrap.Modal(document.getElementById('loadingModal'));
     modal.show();
+    
+    // Auto-hide after 30 seconds as a safety measure
+    setTimeout(() => {
+        hideLoadingModal();
+        showError('Analysis is taking too long. Please try again with a smaller file.');
+    }, 30000);
 }
 
 function hideLoadingModal() {
