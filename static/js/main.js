@@ -188,18 +188,12 @@ function displayResults(data) {
     
     verdictTitle.textContent = data.verdict;
     
-    if (data.verdict === 'AI-Generated') {
-        verdict.className = 'alert alert-danger';
-        verdictDescription.textContent = 'This media appears to be artificially generated. Multiple strong indicators suggest AI involvement in its creation.';
-    } else if (data.verdict === 'Likely AI-Generated') {
+    if (data.verdict === 'Likely AI-Generated') {
         verdict.className = 'alert alert-warning';
-        verdictDescription.textContent = 'This media shows several indicators of AI generation, but the evidence is not conclusive.';
+        verdictDescription.textContent = 'This media shows indicators of AI generation (probability above 30%).';
     } else if (data.verdict === 'Likely Real') {
         verdict.className = 'alert alert-success';
-        verdictDescription.textContent = 'This media appears to be authentic. Analysis suggests it was created through traditional means.';
-    } else if (data.verdict === 'Uncertain') {
-        verdict.className = 'alert alert-info';
-        verdictDescription.textContent = 'The analysis shows mixed indicators. The system cannot determine with confidence whether this is AI-generated or real.';
+        verdictDescription.textContent = 'This media appears to be authentic (probability below 30%).';
     } else {
         verdict.className = 'alert alert-warning';
         verdictDescription.textContent = 'Analysis could not be completed successfully. Please try again or contact support.';

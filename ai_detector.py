@@ -495,19 +495,13 @@ class AIMediaDetector:
             # Normalize final score
             final_ai_probability = ai_score / total_weight if total_weight > 0 else 0.0
             
-            # Determine verdict with more sensitive thresholds
-            if final_ai_probability > 0.5:
-                verdict = 'AI-Generated'
-                analysis_factors.append("Multiple strong indicators of AI generation")
-            elif final_ai_probability > 0.3:
+            # Determine verdict with 30% threshold as requested
+            if final_ai_probability > 0.3:
                 verdict = 'Likely AI-Generated'
-                analysis_factors.append("Several indicators suggest AI generation")
-            elif final_ai_probability < 0.15:
-                verdict = 'Likely Real'
-                analysis_factors.append("Strong indicators of authentic content")
+                analysis_factors.append("AI Generation Probability above 30% - likely AI-generated")
             else:
-                verdict = 'Uncertain'
-                analysis_factors.append("Mixed indicators - inconclusive")
+                verdict = 'Likely Real'
+                analysis_factors.append("AI Generation Probability below 30% - likely real")
             
             # Calculate confidence based on consistency of indicators
             confidence = 0.5 + (final_ai_probability * 0.5) if final_ai_probability > 0.5 else 0.5
@@ -581,18 +575,12 @@ class AIMediaDetector:
             analysis_factors = []
             analysis_factors.append(f"Analyzed {len(frame_predictions)} frames")
             
-            if avg_ai_probability > 0.6:
-                analysis_factors.append("High AI probability across video frames")
-                verdict = 'AI-Generated'
-            elif avg_ai_probability > 0.4:
-                analysis_factors.append("Moderate AI probability across video frames")
+            if avg_ai_probability > 0.3:
+                analysis_factors.append("AI Generation Probability above 30% - likely AI-generated")
                 verdict = 'Likely AI-Generated'
-            elif avg_ai_probability < 0.2:
-                analysis_factors.append("Low AI probability - likely real video")
-                verdict = 'Likely Real'
             else:
-                analysis_factors.append("Mixed indicators across video frames")
-                verdict = 'Uncertain'
+                analysis_factors.append("AI Generation Probability below 30% - likely real")
+                verdict = 'Likely Real'
             
             return {
                 'ai_probability': round(avg_ai_probability, 4),
