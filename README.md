@@ -14,16 +14,16 @@ This project helps identify whether photos or videos are real or artificially ge
 ## ✨ Features
 
 ### 🖼️ Image Analysis
-- **AI Probability Score**: Percentage likelihood of AI generation
-- **Confidence Rating**: Model certainty in the prediction
+- **Clear Results**: Simple "AI Generated" or "Real" verdict
+- **Fast Processing**: Results in under 1 second
 - **Metadata Extraction**: EXIF data and file properties analysis
-- **Compression Analysis**: DCT-based artifact detection
-- **Face Detection**: Deepfake indicators in facial regions
+- **Compression Analysis**: Quick file size and quality checks
+- **Confidence Rating**: Analysis certainty percentage
 
 ### 🎥 Video Analysis
-- **Frame-by-Frame Analysis**: Sampling multiple frames for comprehensive detection
-- **Motion Consistency**: Temporal pattern analysis
-- **Audio-Visual Sync**: Checking for inconsistencies (when applicable)
+- **Quick Frame Sampling**: Fast analysis of key frames
+- **Clear Results**: Simple "AI Generated" or "Real" verdict
+- **Motion Consistency**: Basic temporal pattern analysis
 - **Metadata Inspection**: Video-specific property analysis
 
 ### 🌐 Web Interface

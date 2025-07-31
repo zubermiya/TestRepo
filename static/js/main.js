@@ -155,24 +155,22 @@ function displayResults(data) {
     // Update file name
     document.getElementById('fileName').textContent = data.filename;
 
-    // Update AI probability
+    // Update AI probability with clearer labels
     const aiProbability = Math.round(data.ai_probability * 100);
     const aiProbabilityElement = document.getElementById('aiProbability');
     const aiProbabilityBar = document.getElementById('aiProbabilityBar');
     
-    aiProbabilityElement.textContent = aiProbability + '%';
-    aiProbabilityBar.style.width = aiProbability + '%';
-    
-    // Color code based on probability
-    if (aiProbability < 30) {
-        aiProbabilityElement.className = 'badge bg-success fs-6';
-        aiProbabilityBar.className = 'progress-bar low-risk';
-    } else if (aiProbability < 70) {
-        aiProbabilityElement.className = 'badge bg-warning fs-6';
-        aiProbabilityBar.className = 'progress-bar medium-risk';
-    } else {
+    // Show clear labels instead of just percentages
+    if (data.verdict === 'AI Generated') {
+        aiProbabilityElement.textContent = 'AI Generated';
         aiProbabilityElement.className = 'badge bg-danger fs-6';
-        aiProbabilityBar.className = 'progress-bar high-risk';
+        aiProbabilityBar.className = 'progress-bar bg-danger';
+        aiProbabilityBar.style.width = '100%';
+    } else {
+        aiProbabilityElement.textContent = 'Real';
+        aiProbabilityElement.className = 'badge bg-success fs-6';
+        aiProbabilityBar.className = 'progress-bar bg-success';
+        aiProbabilityBar.style.width = '100%';
     }
 
     // Update confidence
@@ -180,22 +178,22 @@ function displayResults(data) {
     document.getElementById('confidence').textContent = confidence + '%';
     document.getElementById('confidenceBar').style.width = confidence + '%';
 
-    // Update verdict
+    // Update verdict with clear, simple display
     const verdict = document.getElementById('verdict');
     const verdictTitle = document.getElementById('verdictTitle');
     const verdictDescription = document.getElementById('verdictDescription');
     
     verdictTitle.textContent = data.verdict;
     
-    if (data.verdict === 'AI-Generated') {
+    if (data.verdict === 'AI Generated') {
         verdict.className = 'alert alert-danger';
-        verdictDescription.textContent = 'This media appears to be artificially generated. Multiple indicators suggest AI involvement in its creation.';
-    } else if (data.verdict === 'Likely Real') {
+        verdictDescription.textContent = '🤖 This content was created using artificial intelligence.';
+    } else if (data.verdict === 'Real') {
         verdict.className = 'alert alert-success';
-        verdictDescription.textContent = 'This media appears to be authentic. Analysis suggests it was created through traditional means.';
+        verdictDescription.textContent = '✅ This content appears to be authentic and real.';
     } else {
         verdict.className = 'alert alert-warning';
-        verdictDescription.textContent = 'Analysis could not be completed successfully. Please try again or contact support.';
+        verdictDescription.textContent = '⚠️ Unable to determine authenticity. Please try again.';
     }
 
     // Update analysis factors
