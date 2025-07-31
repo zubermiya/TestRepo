@@ -362,6 +362,61 @@ function displayDetailedResults(data) {
         `;
     }
 
+    // AI Characteristics Analysis (NEW - more accurate)
+    if (data.ai_characteristics) {
+        const aiChar = data.ai_characteristics;
+        
+        if (aiChar.smoothness_score !== undefined) {
+            html += `
+                <div class="analysis-card">
+                    <h6><i class="fas fa-feather me-2"></i>Smoothness Analysis</h6>
+                    <div class="analysis-value">${aiChar.smoothness_score.toFixed(0)}</div>
+                    <small class="text-muted">Smoothness Score</small>
+                </div>
+            `;
+        }
+        
+        if (aiChar.edge_density !== undefined) {
+            html += `
+                <div class="analysis-card">
+                    <h6><i class="fas fa-border-all me-2"></i>Edge Analysis</h6>
+                    <div class="analysis-value">${(aiChar.edge_density * 100).toFixed(2)}%</div>
+                    <small class="text-muted">Edge Density</small>
+                </div>
+            `;
+        }
+        
+        if (aiChar.color_variance !== undefined) {
+            html += `
+                <div class="analysis-card">
+                    <h6><i class="fas fa-palette me-2"></i>Color Analysis</h6>
+                    <div class="analysis-value">${aiChar.color_variance.toFixed(0)}</div>
+                    <small class="text-muted">Color Variance</small>
+                </div>
+            `;
+        }
+        
+        if (aiChar.symmetry_score !== undefined) {
+            html += `
+                <div class="analysis-card">
+                    <h6><i class="fas fa-balance-scale me-2"></i>Symmetry Analysis</h6>
+                    <div class="analysis-value">${(aiChar.symmetry_score * 100).toFixed(1)}%</div>
+                    <small class="text-muted">Symmetry Score</small>
+                </div>
+            `;
+        }
+        
+        if (aiChar.ai_score !== undefined) {
+            html += `
+                <div class="analysis-card">
+                    <h6><i class="fas fa-robot me-2"></i>AI Characteristics</h6>
+                    <div class="analysis-value">${(aiChar.ai_score * 100).toFixed(1)}%</div>
+                    <small class="text-muted">AI Score</small>
+                </div>
+            `;
+        }
+    }
+
     // Image statistics analysis
     if (data.image_statistics) {
         const stats = data.image_statistics;
