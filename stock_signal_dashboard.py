@@ -8,7 +8,7 @@ from typing import Dict, Any, List, Optional
 
 import pandas as pd
 import yfinance as yf
-import pandas_ta as ta
+# import pandas_ta as ta
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from tqdm import tqdm
 
@@ -41,7 +41,7 @@ RSI_THRESHOLD = 30  # Oversold threshold
 VOLUME_WINDOW = 20
 MIN_AVG_VOLUME = 100_000  # Skip illiquid names
 USE_ADJUSTED = True  # Use Adjusted Close for indicators
-PERIOD = "12mo"
+PERIOD = "24mo"
 INTERVAL = "1d"
 MAX_DOWNLOAD_ATTEMPTS = 4
 
@@ -109,12 +109,26 @@ def compute_indicators(df: pd.DataFrame) -> pd.DataFrame:
     price_series = df["Adj Close"] if (USE_ADJUSTED and "Adj Close" in df.columns) else df["Close"]
 
     df = df.copy()
-    df["SMA_SHORT"] = ta.sma(price_series, length=SHORT_WINDOW)
-    df["SMA_LONG"] = ta.sma(price_series, length=LONG_TREND_WINDOW)
-    df["RSI"] = ta.rsi(price_series, length=RSI_LENGTH)
-    df["VOL_SMA"] = ta.sma(df.get("Volume", pd.Series(index=df.index, dtype=float)), length=VOLUME_WINDOW)
+    # Native SMA
+    df["SMA_SHORT"] = price_series.rolling(window=SHORT_WINDOW, min_periods=SHORT_WINDOW).mean()
+    df["SMA_LONG"] = price_series.rolling(window=LONG_TREND_WINDOW, min_periods=LONG_TREND_WINDOW).mean()
 
-    # Slope of short SMA over a small horizon to ensure rising trend
+    # Native RSI (Wilder's smoothing)
+    delta = price_series.diff()
+    up = delta.clip(lower=0)
+    down = -delta.clip(upper=0)
+    roll_up = up.ewm(alpha=1 / RSI_LENGTH, adjust=False).mean()
+    roll_down = down.ewm(alpha=1 / RSI_LENGTH, adjust=False).mean()
+    rs = roll_up / roll_down
+    df["RSI"] = 100 - (100 / (1 + rs))
+
+    # Volume average
+    if "Volume" in df.columns:
+        df["VOL_SMA"] = df["Volume"].rolling(window=VOLUME_WINDOW, min_periods=VOLUME_WINDOW).mean()
+    else:
+        df["VOL_SMA"] = pd.NA
+
+    # Slope of short SMA
     lookback_slope = max(3, SHORT_WINDOW // 5)
     df["SMA_SHORT_SLOPE"] = df["SMA_SHORT"] - df["SMA_SHORT"].shift(lookback_slope)
 
